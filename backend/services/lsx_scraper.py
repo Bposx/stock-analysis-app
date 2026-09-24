@@ -157,20 +157,19 @@ class LSXService:
         logger.warning("Using fallback LSX stocks data")
         return _get_fallback_stocks()
 
+_DETAIL_CACHE: Dict[str, tuple] = {}
+
+
     async def scrape_stock_detail(self, symbol: str) -> dict:
-        """ດຶງປະຫວັດລາຄາ (OHLCV) ຂອງຫຸ້ນ LSX ລາຍໂຕ"""
+        """ດຶງປະຫວັດລາຄາ (OHLCV) ຂອງຫຸ້ນ LSX ລາຍໂຕ ພ້ອມ cache 5 ນາທີ"""
         symbol = symbol.strip().upper()
-        company_map = await self.get_issue_list()
-        comp = company_map.get(symbol, {})
-        icode = comp.get("icode")
 
-        # ຖ້າບໍ່ພົບ icode, ຄົ້ນຫາຈາກ list
-        if not icode:
-            await self.get_issue_list()
-            comp = _company_info_cache.get(symbol, {})
-            icode = comp.get("icode")
+        # 1. ກວດສອບ Cache (5 ນາທີ)
+        if symbol in _DETAIL_CACHE:
+            data, ts = _DETAIL_CACHE[symbol]
+            if (datetime.utcnow() - ts).total_seconds() < 300:
+                return data
 
-        # Map ເລີ່ມຕົ້ນຖ້າເປັນໂຕຫຼັກ
         default_icodes = {
             "BCEL": "LA3000010006",
             "EDL-GEN": "LA3000020005",
@@ -186,8 +185,13 @@ class LSXService:
             "LCS": "LA3000120003",
             "JDB": "LA3000130002",
         }
-        if not icode and symbol in default_icodes:
-            icode = default_icodes[symbol]
+        icode = default_icodes.get(symbol)
+        comp = _company_info_cache.get(symbol, {})
+
+        if not icode:
+            company_map = await self.get_issue_list()
+            comp = company_map.get(symbol, {})
+            icode = comp.get("icode")
 
         history = []
         if icode:
@@ -197,21 +201,20 @@ class LSXService:
                 to_date = today.strftime("%Y%m%d")
                 url = f"{BASE_URL}/stock/daily-closing-price?ICode={icode}&fromDate={from_date}&toDate={to_date}"
 
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with httpx.AsyncClient(timeout=6.0) as client:
                     res = await client.get(url, headers=HEADERS)
                     if res.status_code == 200:
                         items = res.json().get("data", [])
                         for item in reversed(items):  # Sort chronological (oldest to newest)
                             odate = str(item.get("ODate", ""))
-                            # Format YYYYMMDD -> Unix timestamp
                             try:
                                 dt = datetime.strptime(odate, "%Y%m%d")
-                                ts = int(dt.timestamp())
+                                ts_val = int(dt.timestamp())
                             except Exception:
-                                ts = 0
+                                ts_val = 0
 
                             history.append({
-                                "time": ts,
+                                "time": ts_val,
                                 "date": f"{odate[:4]}-{odate[4:6]}-{odate[6:]}" if len(odate) == 8 else odate,
                                 "open": float(item.get("OPrice") or item.get("CPrice") or 0),
                                 "high": float(item.get("HPrice") or item.get("CPrice") or 0),
@@ -222,12 +225,17 @@ class LSXService:
             except Exception as e:
                 logger.error(f"Error fetching history for {symbol} ({icode}): {e}")
 
-        return {
+        result = {
             "symbol": symbol,
             "company_name": comp.get("name_en") or comp.get("name_lao") or symbol,
             "history": history,
             "info": comp,
         }
+
+        if history:
+            _DETAIL_CACHE[symbol] = (result, datetime.utcnow())
+
+        return result
 
     async def close(self):
         pass
