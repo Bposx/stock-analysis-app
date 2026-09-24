@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     DEBUG: bool = True
-    CORS_ORIGINS: Union[str, List[str]] = "http://localhost:5173,http://localhost:3000"
+    CORS_ORIGINS: Union[str, List[str]] = "*"
 
     @property
     def cors_origins(self) -> List[str]:
