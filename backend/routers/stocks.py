@@ -147,9 +147,13 @@ async def history(
             detail = await lsx_scraper.scrape_stock_detail(clean_sym)
             hist = detail.get("history", [])
             if hist:
+                limit_map = {"1d": 20, "5d": 25, "1mo": 30, "3mo": 75, "6mo": 140}
+                if period in limit_map and len(hist) > limit_map[period]:
+                    hist = hist[-limit_map[period]:]
                 return {"success": True, "symbol": sym, "period": period, "interval": interval, "data": hist}
         except Exception:
             pass
+        return {"success": True, "symbol": sym, "period": period, "interval": interval, "data": []}
 
     valid_combos = {
         "1d": ["1m", "5m", "15m", "1h"],

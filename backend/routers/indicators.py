@@ -59,34 +59,43 @@ async def get_stock_analysis(
 @router.get("/{symbol}")
 async def get_indicators(
     symbol: str,
-    period: str = Query("6mo", description="Data period"),
-    interval: str = Query("1d", description="Data interval"),
-    indicators: str = Query("RSI,MACD,BB,MA", description="Comma-separated: RSI,MACD,BB,MA,STOCH"),
-    rsi_period: int = Query(14),
-    ma_periods: str = Query("20,50,200", description="MA periods e.g. 20,50,200"),
-    ma_type: str = Query("sma", description="sma or ema"),
+    period: str = "6mo",
+    interval: str = "1d",
+    indicators: str = "RSI,MACD,BB,MA",
+    rsi_period: int = 14,
+    ma_periods: str = "20,50,200",
+    ma_type: str = "sma",
 ):
     """ຄິດໄລ່ Technical Indicators ສໍາລັບ symbol"""
     sym = symbol.upper().strip()
     is_lsx = sym.startswith("LSX:") or sym in LSX_SYMBOLS
     clean_sym = sym.replace("LSX:", "")
 
+    # Safely extract primitive values
+    p_rsi = int(getattr(rsi_period, "default", rsi_period) or 14)
+    p_period = str(getattr(period, "default", period) or "6mo")
+    p_interval = str(getattr(interval, "default", interval) or "1d")
+    p_type = str(getattr(ma_type, "default", ma_type) or "sma")
+
     candles = []
     if is_lsx:
         detail = await lsx_scraper.scrape_stock_detail(clean_sym)
         candles = detail.get("history", [])
     else:
-        candles = await get_history(sym, period=period, interval=interval)
+        candles = await get_history(sym, period=p_period, interval=p_interval)
 
     if not candles:
         raise HTTPException(status_code=404, detail=f"No data for symbol '{symbol}'")
 
     try:
-        requested = [i.strip().upper() for i in indicators.split(",")]
-        result = {"symbol": sym, "period": period, "interval": interval}
+        ind_val = indicators if isinstance(indicators, str) else getattr(indicators, "default", "RSI,MACD,BB,MA")
+        if not ind_val:
+            ind_val = "RSI,MACD,BB,MA"
+        requested = [i.strip().upper() for i in str(ind_val).split(",") if i.strip()]
+        result = {"symbol": sym, "period": p_period, "interval": p_interval}
 
         if "RSI" in requested:
-            result["rsi"] = calculate_rsi(candles, period=rsi_period)
+            result["rsi"] = calculate_rsi(candles, period=p_rsi)
 
         if "MACD" in requested:
             result["macd"] = calculate_macd(candles)
@@ -95,8 +104,9 @@ async def get_indicators(
             result["bollinger_bands"] = calculate_bollinger_bands(candles)
 
         if "MA" in requested or "SMA" in requested or "EMA" in requested:
-            periods = [int(p) for p in ma_periods.split(",") if p.strip().isdigit()]
-            result["moving_averages"] = calculate_moving_averages(candles, periods=periods, ma_type=ma_type)
+            ma_val = ma_periods if isinstance(ma_periods, str) else getattr(ma_periods, "default", "20,50,200")
+            periods = [int(p) for p in str(ma_val).split(",") if p.strip().isdigit()]
+            result["moving_averages"] = calculate_moving_averages(candles, periods=periods, ma_type=p_type)
 
         if "STOCH" in requested:
             result["stochastic"] = calculate_stochastic(candles)
