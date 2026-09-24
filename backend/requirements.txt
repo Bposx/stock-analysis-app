@@ -5,6 +5,7 @@ beautifulsoup4==4.12.3
 pandas==2.2.3
 numpy>=1.26.0
 sqlalchemy==2.0.35
+greenlet>=3.0.0
 aiosqlite==0.20.0
 apscheduler==3.10.4
 python-dotenv==1.0.1
