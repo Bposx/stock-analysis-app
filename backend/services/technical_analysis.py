@@ -1,137 +1,219 @@
 """
-Technical Analysis Service
-ຄິດໄລ່ຕົວຊີ້ວັດທາງເຕັກນິກດ້ວຍ Pure Pandas & Numpy
-(RSI, MACD, Bollinger Bands, Moving Averages, Stochastic)
+Technical Analysis Service — Pure Python (No Pandas/Numpy Dependency)
+ຄິດໄລ່ຕົວຊີ້ວັດທາງເຕັກນິກ: RSI, MACD, Bollinger Bands, Moving Averages, Stochastic
+ປ້ອງກັນ C-extension segfault ແລະ Memory OOM ໃນ Server Resource ຈຳກັດ
 """
-import pandas as pd
-import numpy as np
-from typing import Optional
+import math
+from typing import Optional, List, Dict, Any
 
 
-def _to_df(candles: list[dict]) -> pd.DataFrame:
-    """ແປງ OHLCV list -> DataFrame"""
+def _parse_candles(candles: list[dict]) -> list[dict]:
+    """Clean, parse, and sort candles by time ascending"""
     if not candles:
-        return pd.DataFrame()
-    df = pd.DataFrame(candles)
-    df["time"] = pd.to_datetime(df["time"], unit="s")
-    df.set_index("time", inplace=True)
-    df.sort_index(inplace=True)
-    for col in ["open", "high", "low", "close", "volume"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-    return df
+        return []
+    cleaned = []
+    for c in candles:
+        if not isinstance(c, dict):
+            continue
+        try:
+            t = c.get("time")
+            if t is None:
+                continue
+            if isinstance(t, str):
+                t = int(float(t))
+            else:
+                t = int(t)
+
+            close = float(c.get("close") or c.get("price") or 0)
+            open_p = float(c.get("open") or close)
+            high = float(c.get("high") or max(open_p, close))
+            low = float(c.get("low") or min(open_p, close))
+            vol = float(c.get("volume") or 0)
+
+            # Skip invalid numbers
+            if math.isnan(close) or math.isnan(open_p) or math.isnan(high) or math.isnan(low):
+                continue
+
+            cleaned.append({
+                "time": t,
+                "open": open_p,
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": vol,
+            })
+        except Exception:
+            continue
+
+    cleaned.sort(key=lambda x: x["time"])
+    return cleaned
 
 
 def calculate_rsi(candles: list[dict], period: int = 14) -> list[dict]:
-    """RSI — Relative Strength Index (Wilder's RSI)"""
-    df = _to_df(candles)
-    if df.empty or "close" not in df.columns or len(df) < period:
+    """RSI — Relative Strength Index (Wilder's Smoothing)"""
+    data = _parse_candles(candles)
+    if len(data) < period + 1:
         return []
 
-    close_delta = df["close"].diff()
-    up = close_delta.clip(lower=0)
-    down = -1 * close_delta.clip(upper=0)
+    closes = [c["close"] for c in data]
+    gains = [max(0.0, closes[i] - closes[i - 1]) for i in range(1, len(closes))]
+    losses = [max(0.0, closes[i - 1] - closes[i]) for i in range(1, len(closes))]
 
-    # Wilder's Smoothing / Exponential moving average
-    ma_up = up.ewm(com=period - 1, adjust=False, min_periods=period).mean()
-    ma_down = down.ewm(com=period - 1, adjust=False, min_periods=period).mean()
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
 
-    rs = ma_up / ma_down
-    rsi = 100 - (100 / (1 + rs))
+    results = []
+    rs = (avg_gain / avg_loss) if avg_loss > 0 else 100.0
+    rsi = 100.0 - (100.0 / (1.0 + rs)) if avg_loss > 0 else 100.0
+    results.append({"time": data[period]["time"], "value": round(rsi, 2)})
 
-    result = []
-    for ts, val in rsi.items():
-        if pd.notna(val):
-            result.append({
-                "time": int(ts.timestamp()),
-                "value": round(float(val), 2),
-            })
-    return result
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        if avg_loss <= 0.000001:
+            rsi = 100.0
+        else:
+            rs = avg_gain / avg_loss
+            rsi = 100.0 - (100.0 / (1.0 + rs))
+        results.append({"time": data[i + 1]["time"], "value": round(rsi, 2)})
+
+    return results
 
 
 def calculate_macd(
     candles: list[dict],
     fast: int = 12,
     slow: int = 26,
-    signal: int = 9
+    signal: int = 9,
 ) -> dict:
     """MACD — Moving Average Convergence Divergence"""
-    df = _to_df(candles)
-    if df.empty or "close" not in df.columns or len(df) < slow:
+    data = _parse_candles(candles)
+    if len(data) < slow:
         return {"macd": [], "signal": [], "histogram": []}
 
-    exp_fast = df["close"].ewm(span=fast, adjust=False).mean()
-    exp_slow = df["close"].ewm(span=slow, adjust=False).mean()
-    macd_line = exp_fast - exp_slow
-    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
-    histogram = macd_line - signal_line
+    closes = [c["close"] for c in data]
+    k_fast = 2.0 / (fast + 1)
+    k_slow = 2.0 / (slow + 1)
 
-    def _series_to_list(series):
-        return [
-            {"time": int(ts.timestamp()), "value": round(float(val), 4)}
-            for ts, val in series.items()
-            if pd.notna(val)
-        ]
+    ema_fast = sum(closes[:fast]) / fast
+    ema_slow = sum(closes[:slow]) / slow
+
+    # Pre-roll fast EMA to match slow start
+    for i in range(fast, slow - 1):
+        ema_fast = (closes[i] * k_fast) + (ema_fast * (1.0 - k_fast))
+
+    macd_vals = []
+    times = []
+
+    for i in range(slow - 1, len(closes)):
+        ema_fast = (closes[i] * k_fast) + (ema_fast * (1.0 - k_fast))
+        ema_slow = (closes[i] * k_slow) + (ema_slow * (1.0 - k_slow))
+        macd_vals.append(ema_fast - ema_slow)
+        times.append(data[i]["time"])
+
+    if len(macd_vals) < signal:
+        return {
+            "macd": [{"time": times[i], "value": round(macd_vals[i], 4)} for i in range(len(macd_vals))],
+            "signal": [],
+            "histogram": [],
+        }
+
+    k_sig = 2.0 / (signal + 1)
+    sig_ema = sum(macd_vals[:signal]) / signal
+
+    macd_list = []
+    sig_list = []
+    hist_list = []
+
+    for i in range(len(macd_vals)):
+        m = macd_vals[i]
+        t = times[i]
+        macd_list.append({"time": t, "value": round(m, 4)})
+        if i >= signal - 1:
+            if i == signal - 1:
+                sig_ema = sum(macd_vals[:signal]) / signal
+            else:
+                sig_ema = (m * k_sig) + (sig_ema * (1.0 - k_sig))
+            h = m - sig_ema
+            sig_list.append({"time": t, "value": round(sig_ema, 4)})
+            hist_list.append({"time": t, "value": round(h, 4)})
 
     return {
-        "macd": _series_to_list(macd_line),
-        "signal": _series_to_list(signal_line),
-        "histogram": _series_to_list(histogram),
+        "macd": macd_list,
+        "signal": sig_list,
+        "histogram": hist_list,
     }
 
 
 def calculate_bollinger_bands(
     candles: list[dict],
     period: int = 20,
-    std: float = 2.0
+    std: float = 2.0,
 ) -> dict:
     """Bollinger Bands — Upper, Middle (SMA), Lower"""
-    df = _to_df(candles)
-    if df.empty or "close" not in df.columns or len(df) < period:
+    data = _parse_candles(candles)
+    if len(data) < period:
         return {"upper": [], "middle": [], "lower": []}
 
-    middle = df["close"].rolling(window=period).mean()
-    rolling_std = df["close"].rolling(window=period).std()
-    upper = middle + (rolling_std * std)
-    lower = middle - (rolling_std * std)
+    closes = [c["close"] for c in data]
+    upper = []
+    middle = []
+    lower = []
 
-    def _series_to_list(series):
-        return [
-            {"time": int(ts.timestamp()), "value": round(float(val), 4)}
-            for ts, val in series.items()
-            if pd.notna(val)
-        ]
+    for i in range(period - 1, len(closes)):
+        window = closes[i - period + 1 : i + 1]
+        m = sum(window) / period
+        variance = sum((x - m) ** 2 for x in window) / period
+        s = math.sqrt(variance)
+        t = data[i]["time"]
+
+        middle.append({"time": t, "value": round(m, 4)})
+        upper.append({"time": t, "value": round(m + std * s, 4)})
+        lower.append({"time": t, "value": round(m - std * s, 4)})
 
     return {
-        "upper": _series_to_list(upper),
-        "middle": _series_to_list(middle),
-        "lower": _series_to_list(lower),
+        "upper": upper,
+        "middle": middle,
+        "lower": lower,
     }
 
 
 def calculate_moving_averages(
     candles: list[dict],
     periods: list[int] = [20, 50, 200],
-    ma_type: str = "sma"
+    ma_type: str = "sma",
 ) -> dict:
     """Moving Averages — SMA ຫຼື EMA"""
-    df = _to_df(candles)
-    if df.empty or "close" not in df.columns:
+    data = _parse_candles(candles)
+    if not data:
         return {}
 
+    closes = [c["close"] for c in data]
     result = {}
-    for period in periods:
-        if ma_type.lower() == "ema":
-            series = df["close"].ewm(span=period, adjust=False).mean()
-        else:
-            series = df["close"].rolling(window=period).mean()
+    is_ema = str(ma_type).lower() == "ema"
 
+    for period in periods:
         key = f"ma{period}"
-        result[key] = [
-            {"time": int(ts.timestamp()), "value": round(float(val), 4)}
-            for ts, val in series.items()
-            if pd.notna(val)
-        ]
+        if len(closes) < period:
+            result[key] = []
+            continue
+
+        series = []
+        if is_ema:
+            k = 2.0 / (period + 1)
+            ema = sum(closes[:period]) / period
+            series.append({"time": data[period - 1]["time"], "value": round(ema, 4)})
+            for i in range(period, len(closes)):
+                ema = (closes[i] * k) + (ema * (1.0 - k))
+                series.append({"time": data[i]["time"], "value": round(ema, 4)})
+        else:
+            window_sum = sum(closes[:period])
+            series.append({"time": data[period - 1]["time"], "value": round(window_sum / period, 4)})
+            for i in range(period, len(closes)):
+                window_sum += closes[i] - closes[i - period]
+                series.append({"time": data[i]["time"], "value": round(window_sum / period, 4)})
+
+        result[key] = series
 
     return result
 
@@ -139,29 +221,35 @@ def calculate_moving_averages(
 def calculate_stochastic(
     candles: list[dict],
     k: int = 14,
-    d: int = 3
+    d: int = 3,
 ) -> dict:
     """Stochastic Oscillator (%K, %D)"""
-    df = _to_df(candles)
-    if df.empty or len(df) < k:
+    data = _parse_candles(candles)
+    if len(data) < k:
         return {"k": [], "d": []}
 
-    low_min = df["low"].rolling(window=k).min()
-    high_max = df["high"].rolling(window=k).max()
+    k_list = []
+    times = []
+    for i in range(k - 1, len(data)):
+        window = data[i - k + 1 : i + 1]
+        low_min = min(c["low"] for c in window)
+        high_max = max(c["high"] for c in window)
+        c_price = data[i]["close"]
+        diff = high_max - low_min
+        fast_k = ((c_price - low_min) / diff * 100.0) if diff > 0 else 50.0
+        k_list.append(fast_k)
+        times.append(data[i]["time"])
 
-    fast_k = 100 * ((df["close"] - low_min) / (high_max - low_min))
-    fast_d = fast_k.rolling(window=d).mean()
-
-    def _to_list(s):
-        return [
-            {"time": int(ts.timestamp()), "value": round(float(v), 2)}
-            for ts, v in s.items()
-            if pd.notna(v)
-        ]
+    k_res = [{"time": times[i], "value": round(k_list[i], 2)} for i in range(len(k_list))]
+    d_res = []
+    if len(k_list) >= d:
+        for i in range(d - 1, len(k_list)):
+            d_val = sum(k_list[i - d + 1 : i + 1]) / d
+            d_res.append({"time": times[i], "value": round(d_val, 2)})
 
     return {
-        "k": _to_list(fast_k),
-        "d": _to_list(fast_d),
+        "k": k_res,
+        "d": d_res,
     }
 
 
@@ -180,7 +268,8 @@ def analyze_stock(candles: list[dict], current_price: Optional[float] = None) ->
     """
     ວິເຄາະສິນຊັບລະອຽດ: ສະຫຼຸບຜົນການວິເຄາະ, ຄາດຄະເນອະນາຄົດ, ແລະ ຄຳແນະນຳຊື້/ຂາຍ
     """
-    if not candles or len(candles) < 5:
+    data = _parse_candles(candles)
+    if not data or len(data) < 5:
         return {
             "signal": "NEUTRAL",
             "action_label": "ຂໍ້ມູນຍັງບໍ່ພຽງພໍ (Insufficient Data)",
@@ -200,37 +289,30 @@ def analyze_stock(candles: list[dict], current_price: Optional[float] = None) ->
             "breakdown": [],
         }
 
-    df = _to_df(candles)
-    latest_close = current_price if current_price else float(df["close"].iloc[-1])
+    closes = [c["close"] for c in data]
+    latest_close = current_price if current_price else closes[-1]
 
     # Moving Averages
-    ma20 = float(df["close"].rolling(20).mean().iloc[-1]) if len(df) >= 20 else None
-    ma50 = float(df["close"].rolling(50).mean().iloc[-1]) if len(df) >= 50 else None
+    ma20 = (sum(closes[-20:]) / 20) if len(closes) >= 20 else None
+    ma50 = (sum(closes[-50:]) / 50) if len(closes) >= 50 else None
 
-    # RSI (14)
-    delta = df["close"].diff()
-    up = delta.clip(lower=0)
-    down = -1 * delta.clip(upper=0)
-    ma_up = up.ewm(com=13, adjust=False).mean()
-    ma_down = down.ewm(com=13, adjust=False).mean()
-    rs = ma_up / ma_down
-    rsi_series = 100 - (100 / (1 + rs))
-    rsi = float(rsi_series.iloc[-1]) if pd.notna(rsi_series.iloc[-1]) else 50.0
+    # RSI
+    rsi_list = calculate_rsi(data, period=14)
+    rsi = rsi_list[-1]["value"] if rsi_list else 50.0
 
     # MACD
-    fast = df["close"].ewm(span=12, adjust=False).mean()
-    slow = df["close"].ewm(span=26, adjust=False).mean()
-    macd_line = fast - slow
-    sig_line = macd_line.ewm(span=9, adjust=False).mean()
-    hist = macd_line - sig_line
-    macd_val = float(macd_line.iloc[-1])
-    sig_val = float(sig_line.iloc[-1])
-    hist_val = float(hist.iloc[-1])
+    macd_res = calculate_macd(data)
+    hist_list = macd_res.get("histogram", [])
+    hist_val = hist_list[-1]["value"] if hist_list else 0.0
+    macd_list = macd_res.get("macd", [])
+    macd_val = macd_list[-1]["value"] if macd_list else 0.0
+    sig_list = macd_res.get("signal", [])
+    sig_val = sig_list[-1]["value"] if sig_list else 0.0
 
     # Support & Resistance (recent 20 periods)
-    recent = df.tail(min(20, len(df)))
-    resistance = float(recent["high"].max())
-    support = float(recent["low"].min())
+    recent = data[-min(20, len(data)) :]
+    resistance = max(c["high"] for c in recent)
+    support = min(c["low"] for c in recent)
     if resistance <= support:
         resistance = round(latest_close * 1.05, 2)
         support = round(latest_close * 0.95, 2)
@@ -322,27 +404,26 @@ def analyze_stock(candles: list[dict], current_price: Optional[float] = None) ->
         })
 
     # 4. Bollinger Bands position
-    bb_mid = df["close"].rolling(20).mean().iloc[-1] if len(df) >= 20 else latest_close
-    bb_std = df["close"].rolling(20).std().iloc[-1] if len(df) >= 20 else 0
-    bb_lower = bb_mid - (bb_std * 2) if bb_std else latest_close * 0.95
-    bb_upper = bb_mid + (bb_std * 2) if bb_std else latest_close * 1.05
-
-    if latest_close <= bb_lower * 1.02:
-        score += 10
-        breakdown.append({
-            "name": "Bollinger Bands",
-            "signal": "BUY",
-            "status": "ໃກ້ຂອບລຸ່ມ (Support)",
-            "desc": "ລາຄາລົງມາໃກ້ເສັ້ນຂອບລຸ່ມຂອງ Bollinger Bands ເຊິ່ງເປັນແນວຮັບທີ່ມີໂອກາດດີດໂຕຂຶ້ນ"
-        })
-    elif latest_close >= bb_upper * 0.98:
-        score -= 10
-        breakdown.append({
-            "name": "Bollinger Bands",
-            "signal": "SELL",
-            "status": "ໃກ້ຂອບເທິງ (Resistance)",
-            "desc": "ລາຄາຂຶ້ນມາຕິດເສັ້ນຂອບເທິງຂອງ Bollinger Bands ອາດຕິດແນວຕ້ານ ແລະ ຊະລໍໂຕ"
-        })
+    bb = calculate_bollinger_bands(data, period=20)
+    if bb["upper"] and bb["lower"]:
+        bb_upper = bb["upper"][-1]["value"]
+        bb_lower = bb["lower"][-1]["value"]
+        if latest_close <= bb_lower * 1.02:
+            score += 10
+            breakdown.append({
+                "name": "Bollinger Bands",
+                "signal": "BUY",
+                "status": "ໃກ້ຂອບລຸ່ມ (Support)",
+                "desc": "ລາຄາລົງມາໃກ້ເສັ້ນຂອບລຸ່ມຂອງ Bollinger Bands ເຊິ່ງເປັນແນວຮັບທີ່ມີໂອກາດດີດໂຕຂຶ້ນ"
+            })
+        elif latest_close >= bb_upper * 0.98:
+            score -= 10
+            breakdown.append({
+                "name": "Bollinger Bands",
+                "signal": "SELL",
+                "status": "ໃກ້ຂອບເທິງ (Resistance)",
+                "desc": "ລາຄາຂຶ້ນມາຕິດເສັ້ນຂອບເທິງຂອງ Bollinger Bands ອາດຕິດແນວຕ້ານ ແລະ ຊະລໍໂຕ"
+            })
 
     score = max(5, min(95, score))
 
@@ -412,4 +493,3 @@ def analyze_stock(candles: list[dict], current_price: Optional[float] = None) ->
         "recommendation_text": recom_text,
         "breakdown": breakdown,
     }
-
