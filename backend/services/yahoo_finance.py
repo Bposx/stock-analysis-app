@@ -5,6 +5,7 @@ Yahoo Finance Service — Fast Direct Async HTTP + yfinance Fallback
 import httpx
 import asyncio
 import logging
+import pandas as pd
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
