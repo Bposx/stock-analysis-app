@@ -228,7 +228,63 @@ async def search_stocks(query: str, limit: int = 20) -> list[dict]:
 
 
 async def get_multiple_quotes(symbols: list[str]) -> list[dict]:
-    """ດຶງລາຄາຫຼາຍ symbols ພ້ອມກັນ"""
-    tasks = [get_quote(sym) for sym in symbols]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    return [r for r in results if isinstance(r, dict) and r.get("price") is not None]
+    """ດຶງລາຄາຫຼາຍ symbols ພ້ອມກັນດ້ວຍ yf.download (ໄວ ແລະ ປະຢັດ RAM ທີ່ສຸດ)"""
+    if not symbols:
+        return []
+
+    clean_symbols = list(dict.fromkeys([s.strip().upper() for s in symbols if s.strip()]))
+    loop = asyncio.get_event_loop()
+
+    def _batch_fetch():
+        results = []
+        try:
+            df = yf.download(clean_symbols, period="5d", progress=False, group_by="ticker", auto_adjust=False)
+            now_iso = datetime.utcnow().isoformat()
+
+            for sym in clean_symbols:
+                try:
+                    if len(clean_symbols) == 1:
+                        sym_df = df
+                    else:
+                        sym_df = df[sym] if sym in df else None
+
+                    if sym_df is not None and not sym_df.empty:
+                        closes = sym_df["Close"].dropna()
+                        if not closes.empty:
+                            price = float(closes.iloc[-1])
+                            prev_close = float(closes.iloc[-2]) if len(closes) > 1 else price
+                            opens = sym_df["Open"].dropna()
+                            highs = sym_df["High"].dropna()
+                            lows = sym_df["Low"].dropna()
+                            vols = sym_df["Volume"].dropna()
+
+                            open_price = float(opens.iloc[-1]) if not opens.empty else price
+                            high_price = float(highs.iloc[-1]) if not highs.empty else price
+                            low_price = float(lows.iloc[-1]) if not lows.empty else price
+                            vol = float(vols.iloc[-1]) if not vols.empty else 0.0
+
+                            change = price - prev_close
+                            change_pct = (change / (prev_close or 1)) * 100
+
+                            results.append({
+                                "symbol": sym,
+                                "price": round(price, 2),
+                                "open": round(open_price, 2),
+                                "high": round(high_price, 2),
+                                "low": round(low_price, 2),
+                                "volume": vol,
+                                "previous_close": round(prev_close, 2),
+                                "change": round(change, 2),
+                                "change_pct": round(change_pct, 2),
+                                "currency": "USD",
+                                "market_cap": None,
+                                "timestamp": now_iso,
+                            })
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        return results
+
+    return await loop.run_in_executor(None, _batch_fetch)
