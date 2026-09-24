@@ -1,10 +1,9 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 yfinance==0.2.43
-playwright==1.47.0
 beautifulsoup4==4.12.3
 pandas==2.2.3
-pandas-ta==0.3.14b
+numpy>=1.26.0
 sqlalchemy==2.0.35
 aiosqlite==0.20.0
 apscheduler==3.10.4
