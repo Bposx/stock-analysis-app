@@ -1,171 +1,241 @@
 """
-Yahoo Finance Service
+Yahoo Finance Service — Fast Direct Async HTTP + yfinance Fallback
 ດຶງຂໍ້ມູນຫຸ້ນຕ່າງປະເທດ: US, Thai (.BK), Crypto (-USD), ຯລຯ
 """
-import yfinance as yf
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Optional
+import httpx
 import asyncio
-from functools import lru_cache
+import logging
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 
+logger = logging.getLogger(__name__)
 
-def _get_ticker(symbol: str) -> yf.Ticker:
-    return yf.Ticker(symbol)
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+}
+
+# Baseline cache ສໍາລັບ fallback ຖ້າເຄືອຂ່າຍມີບັນຫາ
+_QUOTE_CACHE: Dict[str, dict] = {}
 
 
 async def get_quote(symbol: str) -> dict:
-    """ດຶງລາຄາ real-time ສໍາລັບ symbol ໃດໜຶ່ງ ພ້ອມ Fallback ທີ່ແຂງແກ່ນ"""
-    loop = asyncio.get_event_loop()
+    """ດຶງລາຄາ real-time ສໍາລັບ symbol ໃດໜຶ່ງ ຜ່ານ Yahoo Chart REST API ໂດຍກົງ"""
+    sym = symbol.strip().upper()
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1d&range=5d"
 
-    def _fetch():
-        ticker = _get_ticker(symbol)
-        price = None
-        open_price = None
-        high = None
-        low = None
-        vol = None
-        prev_close = None
-        currency = "USD"
-        mkt_cap = None
+    try:
+        async with httpx.AsyncClient(headers=HEADERS, timeout=8.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("chart", {}).get("result")
+                if results:
+                    item = results[0]
+                    meta = item.get("meta", {})
+                    price = meta.get("regularMarketPrice")
+                    prev_close = meta.get("chartPreviousClose") or price
 
-        # 1. ລອງໃຊ້ fast_info
-        try:
-            info = ticker.fast_info
-            price = getattr(info, "last_price", None)
-            open_price = getattr(info, "open", None)
-            high = getattr(info, "day_high", None)
-            low = getattr(info, "day_low", None)
-            vol = getattr(info, "last_volume", None)
-            prev_close = getattr(info, "previous_close", None)
-            currency = getattr(info, "currency", "USD")
-            mkt_cap = getattr(info, "market_cap", None)
-        except Exception:
-            pass
+                    # ຖ້າບໍ່ມີ regularMarketPrice, ລອງດຶງຈາກ close candle ລ່າສຸດ
+                    if price is None:
+                        quotes = item.get("indicators", {}).get("quote", [{}])[0]
+                        closes = [c for c in quotes.get("close", []) if c is not None]
+                        if closes:
+                            price = closes[-1]
+                            if len(closes) > 1:
+                                prev_close = closes[-2]
 
-        # 2. ຖ້າ fast_info ບໍ່ໄດ້ ຫຼື ເກີດ KeyError, ໃຊ້ history(period="5d") ແທນ
-        if price is None:
-            try:
-                hist = ticker.history(period="5d")
-                if not hist.empty:
-                    last_row = hist.iloc[-1]
-                    price = float(last_row["Close"])
-                    open_price = float(last_row["Open"])
-                    high = float(last_row["High"])
-                    low = float(last_row["Low"])
-                    vol = float(last_row["Volume"])
-                    if len(hist) > 1:
-                        prev_close = float(hist.iloc[-2]["Close"])
-                    else:
-                        prev_close = open_price
-            except Exception:
-                pass
+                    if price is not None:
+                        change = price - (prev_close or price)
+                        change_pct = (change / (prev_close or 1)) * 100
 
-        if price is None:
-            return {
-                "symbol": symbol.upper(),
-                "price": None,
-                "open": None,
-                "high": None,
-                "low": None,
-                "volume": None,
-                "previous_close": None,
-                "change": 0.0,
-                "change_pct": 0.0,
-                "currency": currency or "USD",
+                        quote_data = {
+                            "symbol": sym,
+                            "price": round(float(price), 2),
+                            "open": round(float(meta.get("regularMarketDayHigh") or price), 2),
+                            "high": round(float(meta.get("regularMarketDayHigh") or price), 2),
+                            "low": round(float(meta.get("regularMarketDayLow") or price), 2),
+                            "volume": meta.get("regularMarketVolume") or 0,
+                            "previous_close": round(float(prev_close), 2) if prev_close else round(float(price), 2),
+                            "change": round(float(change), 2),
+                            "change_pct": round(float(change_pct), 2),
+                            "currency": meta.get("currency") or "USD",
+                            "market_cap": None,
+                            "timestamp": datetime.utcnow().isoformat(),
+                        }
+                        _QUOTE_CACHE[sym] = quote_data
+                        return quote_data
+    except Exception as e:
+        logger.warning(f"Direct quote fetch failed for {sym}: {e}")
+
+    # Fallback 1: Cache ເກົ່າຖ້າມີ
+    if sym in _QUOTE_CACHE:
+        return _QUOTE_CACHE[sym]
+
+    # Fallback 2: yfinance ticker
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(sym)
+        hist = ticker.history(period="5d")
+        if not hist.empty:
+            last_row = hist.iloc[-1]
+            p = float(last_row["Close"])
+            prev_p = float(hist.iloc[-2]["Close"]) if len(hist) > 1 else p
+            c = p - prev_p
+            quote_data = {
+                "symbol": sym,
+                "price": round(p, 2),
+                "open": round(float(last_row["Open"]), 2),
+                "high": round(float(last_row["High"]), 2),
+                "low": round(float(last_row["Low"]), 2),
+                "volume": int(last_row["Volume"]) if not pd.isna(last_row["Volume"]) else 0,
+                "previous_close": round(prev_p, 2),
+                "change": round(c, 2),
+                "change_pct": round((c / (prev_p or 1)) * 100, 2),
+                "currency": "USD",
                 "market_cap": None,
                 "timestamp": datetime.utcnow().isoformat(),
             }
+            _QUOTE_CACHE[sym] = quote_data
+            return quote_data
+    except Exception:
+        pass
 
-        change = (price or 0) - (prev_close or price or 0)
-        change_pct = (change / (prev_close or price or 1)) * 100
+    return {
+        "symbol": sym,
+        "price": None,
+        "open": None,
+        "high": None,
+        "low": None,
+        "volume": None,
+        "previous_close": None,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "currency": "USD",
+        "market_cap": None,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
-        return {
-            "symbol": symbol.upper(),
-            "price": round(price, 2) if price else None,
-            "open": round(open_price, 2) if open_price else None,
-            "high": round(high, 2) if high else None,
-            "low": round(low, 2) if low else None,
-            "volume": vol,
-            "previous_close": round(prev_close, 2) if prev_close else None,
-            "change": round(change, 2),
-            "change_pct": round(change_pct, 2),
-            "currency": currency or "USD",
-            "market_cap": mkt_cap,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
 
-    return await loop.run_in_executor(None, _fetch)
+async def get_multiple_quotes(symbols: List[str]) -> List[dict]:
+    """ດຶງລາຄາຫຼາຍ symbols ພ້ອມກັນ ແບບ Asynchronous (ໄວ, ບໍ່ຕິດ rate limit)"""
+    if not symbols:
+        return []
+
+    clean_symbols = list(dict.fromkeys([s.strip().upper() for s in symbols if s.strip()]))
+    sem = asyncio.Semaphore(10)
+
+    async def _fetch(s: str):
+        async with sem:
+            return await get_quote(s)
+
+    tasks = [_fetch(s) for s in clean_symbols]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return [r for r in results if isinstance(r, dict) and r.get("price") is not None]
 
 
 async def get_history(
     symbol: str,
     period: str = "1mo",
     interval: str = "1d"
-) -> list[dict]:
-    """
-    ດຶງ OHLCV history ສໍາລັບ chart
-    period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, max
-    interval: 1m, 5m, 15m, 1h, 1d, 1wk, 1mo
-    """
-    loop = asyncio.get_event_loop()
+) -> List[dict]:
+    """ດຶງ OHLCV history ສໍາລັບ chart (TradingView format) ຜ່ານ Yahoo Chart API ໂດຍກົງ"""
+    sym = symbol.strip().upper()
 
-    def _fetch():
-        ticker = _get_ticker(symbol)
-        df = ticker.history(period=period, interval=interval)
-        if df.empty:
-            return []
-        df.index = pd.to_datetime(df.index)
-        records = []
-        for ts, row in df.iterrows():
-            records.append({
-                "time": int(ts.timestamp()),
-                "open": round(float(row["Open"]), 4),
-                "high": round(float(row["High"]), 4),
-                "low": round(float(row["Low"]), 4),
-                "close": round(float(row["Close"]), 4),
-                "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
-            })
-        return records
+    # Map intervals/periods
+    valid_range = period if period in ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"] else "1mo"
+    valid_interval = interval if interval in ["1m", "5m", "15m", "1h", "1d", "1wk", "1mo"] else "1d"
 
-    return await loop.run_in_executor(None, _fetch)
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval={valid_interval}&range={valid_range}"
+
+    try:
+        async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("chart", {}).get("result")
+                if results:
+                    item = results[0]
+                    timestamps = item.get("timestamp", [])
+                    indicators = item.get("indicators", {}).get("quote", [{}])[0]
+
+                    opens = indicators.get("open", [])
+                    highs = indicators.get("high", [])
+                    lows = indicators.get("low", [])
+                    closes = indicators.get("close", [])
+                    volumes = indicators.get("volume", [])
+
+                    records = []
+                    for i in range(len(timestamps)):
+                        t = timestamps[i]
+                        c = closes[i] if i < len(closes) else None
+                        o = opens[i] if i < len(opens) else c
+                        h = highs[i] if i < len(highs) else c
+                        l = lows[i] if i < len(lows) else c
+                        v = volumes[i] if i < len(volumes) else 0
+
+                        if c is not None and o is not None:
+                            records.append({
+                                "time": int(t),
+                                "open": round(float(o), 4),
+                                "high": round(float(h), 4),
+                                "low": round(float(l), 4),
+                                "close": round(float(c), 4),
+                                "volume": int(v) if v is not None else 0,
+                            })
+                    if records:
+                        return records
+    except Exception as e:
+        logger.warning(f"Direct history fetch failed for {sym}: {e}")
+
+    # Fallback: yfinance
+    try:
+        import yfinance as yf
+        import pandas as pd
+        ticker = yf.Ticker(sym)
+        df = ticker.history(period=valid_range, interval=valid_interval)
+        if not df.empty:
+            records = []
+            for ts, row in df.iterrows():
+                records.append({
+                    "time": int(ts.timestamp()),
+                    "open": round(float(row["Open"]), 4),
+                    "high": round(float(row["High"]), 4),
+                    "low": round(float(row["Low"]), 4),
+                    "close": round(float(row["Close"]), 4),
+                    "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
+                })
+            return records
+    except Exception:
+        pass
+
+    return []
 
 
 async def get_company_info(symbol: str) -> dict:
-    """ດຶງຂໍ້ມູນບໍລິສັດ, ປະຫວັດ, ສິນຊັບ, ເງິນປັນຜົນ ແລະ ຄ່າຄອງຕົວ"""
-    loop = asyncio.get_event_loop()
-
-    def _fetch():
-        ticker = _get_ticker(symbol)
+    """ດຶງຂໍ້ມູນບໍລິສັດ, ປະຫວັດ, ເງິນປັນຜົນ"""
+    sym = symbol.strip().upper()
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(sym)
         info = ticker.info or {}
-        
-        # 1. ດຶງປະຫວັດການຈ່າຍປັນຜົນ (Dividend History)
+
         dividend_history = []
         try:
             divs = ticker.dividends
             if divs is not None and not divs.empty:
-                tail_divs = divs.tail(8)
-                for dt, amt in tail_divs.items():
-                    date_str = str(dt)[:10]
+                for dt, amt in divs.tail(8).items():
                     dividend_history.append({
-                        "date": date_str,
+                        "date": str(dt)[:10],
                         "amount": round(float(amt), 4),
                     })
-                dividend_history.reverse()  # ໃໝ່ສຸດຂຶ້ນກ່ອນ
+                dividend_history.reverse()
         except Exception:
             pass
 
-        # 2. ຄາດຄະເນປີສ້າງຕັ້ງຖ້າບໍ່ມີ field ຕົງ
-        founded_year = info.get("founded")
-        if not founded_year and info.get("longBusinessSummary"):
-            import re
-            m = re.search(r'(?:founded|incorporated|organized|established) in (\d{4})', info["longBusinessSummary"], re.IGNORECASE)
-            if m:
-                founded_year = m.group(1)
-
         return {
-            "symbol": symbol.upper(),
-            "name": info.get("longName") or info.get("shortName", symbol),
+            "symbol": sym,
+            "name": info.get("longName") or info.get("shortName", sym),
             "sector": info.get("sector", ""),
             "industry": info.get("industry", ""),
             "country": info.get("country", ""),
@@ -174,7 +244,7 @@ async def get_company_info(symbol: str) -> dict:
             "website": info.get("website", ""),
             "description": info.get("longBusinessSummary", ""),
             "employees": info.get("fullTimeEmployees"),
-            "founded": founded_year,
+            "founded": info.get("founded"),
             "total_assets": info.get("totalAssets"),
             "total_revenue": info.get("totalRevenue"),
             "net_income": info.get("netIncomeToCommon"),
@@ -195,96 +265,62 @@ async def get_company_info(symbol: str) -> dict:
             "market_cap": info.get("marketCap"),
             "dividend_history": dividend_history,
         }
+    except Exception:
+        return {
+            "symbol": sym,
+            "name": sym,
+            "sector": "Technology",
+            "industry": "General",
+            "country": "",
+            "city": "",
+            "state": "",
+            "website": "",
+            "description": "",
+            "employees": None,
+            "founded": None,
+            "total_assets": None,
+            "total_revenue": None,
+            "net_income": None,
+            "pe_ratio": None,
+            "pb_ratio": None,
+            "dividend_yield": None,
+            "dividend_rate": None,
+            "payout_ratio": None,
+            "beta": None,
+            "eps": None,
+            "roe": None,
+            "roa": None,
+            "debt_to_equity": None,
+            "profit_margins": None,
+            "52w_high": None,
+            "52w_low": None,
+            "avg_volume": None,
+            "market_cap": None,
+            "dividend_history": [],
+        }
 
-    return await loop.run_in_executor(None, _fetch)
 
+async def search_stocks(query: str, limit: int = 20) -> List[dict]:
+    """ຄົ້ນຫາ stock symbols ຜ່ານ Yahoo Search API ໂດຍກົງ"""
+    q = query.strip()
+    url = f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount={limit}&newsCount=0"
+    results = []
+    try:
+        async with httpx.AsyncClient(headers=HEADERS, timeout=5.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                for item in data.get("quotes", []):
+                    sym = item.get("symbol")
+                    if sym:
+                        results.append({
+                            "symbol": sym,
+                            "name": item.get("shortname") or item.get("longname") or sym,
+                            "exchange": item.get("exchange", ""),
+                            "type": item.get("quoteType", "EQUITY"),
+                            "currency": item.get("currency", "USD"),
+                        })
+    except Exception as e:
+        logger.warning(f"Search failed for {q}: {e}")
 
-async def search_stocks(query: str, limit: int = 20) -> list[dict]:
-    """
-    ຄົ້ນຫາ stock symbols
-    ໃຊ້ yfinance search (v0.2.43+)
-    """
-    loop = asyncio.get_event_loop()
-
-    def _fetch():
-        results = []
-        try:
-            # yfinance Search
-            search = yf.Search(query, max_results=limit)
-            quotes = search.quotes
-            for q in quotes:
-                results.append({
-                    "symbol": q.get("symbol", ""),
-                    "name": q.get("shortname") or q.get("longname", ""),
-                    "exchange": q.get("exchange", ""),
-                    "type": q.get("quoteType", "EQUITY"),
-                    "currency": q.get("currency", ""),
-                })
-        except Exception:
-            pass
-        return results
-
-    return await loop.run_in_executor(None, _fetch)
-
-
-async def get_multiple_quotes(symbols: list[str]) -> list[dict]:
-    """ດຶງລາຄາຫຼາຍ symbols ພ້ອມກັນດ້ວຍ yf.download (ໄວ ແລະ ປະຢັດ RAM ທີ່ສຸດ)"""
-    if not symbols:
-        return []
-
-    clean_symbols = list(dict.fromkeys([s.strip().upper() for s in symbols if s.strip()]))
-    loop = asyncio.get_event_loop()
-
-    def _batch_fetch():
-        results = []
-        try:
-            df = yf.download(clean_symbols, period="5d", progress=False, group_by="ticker", auto_adjust=False)
-            now_iso = datetime.utcnow().isoformat()
-
-            for sym in clean_symbols:
-                try:
-                    if len(clean_symbols) == 1:
-                        sym_df = df
-                    else:
-                        sym_df = df[sym] if sym in df else None
-
-                    if sym_df is not None and not sym_df.empty:
-                        closes = sym_df["Close"].dropna()
-                        if not closes.empty:
-                            price = float(closes.iloc[-1])
-                            prev_close = float(closes.iloc[-2]) if len(closes) > 1 else price
-                            opens = sym_df["Open"].dropna()
-                            highs = sym_df["High"].dropna()
-                            lows = sym_df["Low"].dropna()
-                            vols = sym_df["Volume"].dropna()
-
-                            open_price = float(opens.iloc[-1]) if not opens.empty else price
-                            high_price = float(highs.iloc[-1]) if not highs.empty else price
-                            low_price = float(lows.iloc[-1]) if not lows.empty else price
-                            vol = float(vols.iloc[-1]) if not vols.empty else 0.0
-
-                            change = price - prev_close
-                            change_pct = (change / (prev_close or 1)) * 100
-
-                            results.append({
-                                "symbol": sym,
-                                "price": round(price, 2),
-                                "open": round(open_price, 2),
-                                "high": round(high_price, 2),
-                                "low": round(low_price, 2),
-                                "volume": vol,
-                                "previous_close": round(prev_close, 2),
-                                "change": round(change, 2),
-                                "change_pct": round(change_pct, 2),
-                                "currency": "USD",
-                                "market_cap": None,
-                                "timestamp": now_iso,
-                            })
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        return results
-
-    return await loop.run_in_executor(None, _batch_fetch)
+    return results
