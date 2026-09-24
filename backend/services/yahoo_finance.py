@@ -15,27 +15,83 @@ def _get_ticker(symbol: str) -> yf.Ticker:
 
 
 async def get_quote(symbol: str) -> dict:
-    """ດຶງລາຄາ real-time ສໍາລັບ symbol ໃດໜຶ່ງ"""
+    """ດຶງລາຄາ real-time ສໍາລັບ symbol ໃດໜຶ່ງ ພ້ອມ Fallback ທີ່ແຂງແກ່ນ"""
     loop = asyncio.get_event_loop()
 
     def _fetch():
         ticker = _get_ticker(symbol)
-        info = ticker.fast_info
+        price = None
+        open_price = None
+        high = None
+        low = None
+        vol = None
+        prev_close = None
+        currency = "USD"
+        mkt_cap = None
+
+        # 1. ລອງໃຊ້ fast_info
+        try:
+            info = ticker.fast_info
+            price = getattr(info, "last_price", None)
+            open_price = getattr(info, "open", None)
+            high = getattr(info, "day_high", None)
+            low = getattr(info, "day_low", None)
+            vol = getattr(info, "last_volume", None)
+            prev_close = getattr(info, "previous_close", None)
+            currency = getattr(info, "currency", "USD")
+            mkt_cap = getattr(info, "market_cap", None)
+        except Exception:
+            pass
+
+        # 2. ຖ້າ fast_info ບໍ່ໄດ້ ຫຼື ເກີດ KeyError, ໃຊ້ history(period="5d") ແທນ
+        if price is None:
+            try:
+                hist = ticker.history(period="5d")
+                if not hist.empty:
+                    last_row = hist.iloc[-1]
+                    price = float(last_row["Close"])
+                    open_price = float(last_row["Open"])
+                    high = float(last_row["High"])
+                    low = float(last_row["Low"])
+                    vol = float(last_row["Volume"])
+                    if len(hist) > 1:
+                        prev_close = float(hist.iloc[-2]["Close"])
+                    else:
+                        prev_close = open_price
+            except Exception:
+                pass
+
+        if price is None:
+            return {
+                "symbol": symbol.upper(),
+                "price": None,
+                "open": None,
+                "high": None,
+                "low": None,
+                "volume": None,
+                "previous_close": None,
+                "change": 0.0,
+                "change_pct": 0.0,
+                "currency": currency or "USD",
+                "market_cap": None,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+        change = (price or 0) - (prev_close or price or 0)
+        change_pct = (change / (prev_close or price or 1)) * 100
+
         return {
             "symbol": symbol.upper(),
-            "price": getattr(info, "last_price", None),
-            "open": getattr(info, "open", None),
-            "high": getattr(info, "day_high", None),
-            "low": getattr(info, "day_low", None),
-            "volume": getattr(info, "last_volume", None),
-            "previous_close": getattr(info, "previous_close", None),
-            "change": (getattr(info, "last_price", 0) or 0) - (getattr(info, "previous_close", 0) or 0),
-            "change_pct": (
-                (((getattr(info, "last_price", 0) or 0) - (getattr(info, "previous_close", 0) or 0))
-                 / (getattr(info, "previous_close", 1) or 1)) * 100
-            ),
-            "currency": getattr(info, "currency", "USD"),
-            "market_cap": getattr(info, "market_cap", None),
+            "price": round(price, 2) if price else None,
+            "open": round(open_price, 2) if open_price else None,
+            "high": round(high, 2) if high else None,
+            "low": round(low, 2) if low else None,
+            "volume": vol,
+            "previous_close": round(prev_close, 2) if prev_close else None,
+            "change": round(change, 2),
+            "change_pct": round(change_pct, 2),
+            "currency": currency or "USD",
+            "market_cap": mkt_cap,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
@@ -175,4 +231,4 @@ async def get_multiple_quotes(symbols: list[str]) -> list[dict]:
     """ດຶງລາຄາຫຼາຍ symbols ພ້ອມກັນ"""
     tasks = [get_quote(sym) for sym in symbols]
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    return [r for r in results if isinstance(r, dict)]
+    return [r for r in results if isinstance(r, dict) and r.get("price") is not None]
