@@ -37,10 +37,8 @@ async def get_stock_analysis(
     if is_lsx:
         detail = await lsx_scraper.scrape_stock_detail(clean_sym)
         candles = detail.get("history", [])
-        stocks = await lsx_scraper.scrape_all_stocks()
-        match = next((s for s in stocks if s["symbol"] == clean_sym), None)
-        if match:
-            current_price = match.get("price")
+        if candles:
+            current_price = candles[-1].get("close")
     else:
         try:
             candles = await get_history(sym, period=period, interval="1d")
