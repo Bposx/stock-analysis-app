@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files
+.env
+.env.local
+
+# SQLite Database
+*.db
+*.sqlite3
+stock_data.db
+
+# Playwright
+.playwright/
+
+# Logs
+*.log
