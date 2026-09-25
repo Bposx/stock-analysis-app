@@ -14,6 +14,7 @@ export default function Footer() {
     { to: "/stocks/japan", label: t("nav.japanStocks"), flag: "🇯🇵" },
     { to: "/stocks/us", label: t("nav.usStocks"), flag: "🇺🇸" },
     { to: "/stocks/other", label: t("nav.otherCrypto"), flag: "🌐" },
+    { to: "/brokers", label: t("nav.brokers"), flag: "🏛️" },
   ];
 
   return (

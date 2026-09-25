@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Search, TrendingUp, X, Globe, ChevronDown, Check, Sun, Moon } from "lucide-react";
+import { BarChart3, Search, TrendingUp, X, Globe, ChevronDown, Check, Sun, Moon, Landmark } from "lucide-react";
 import { useSearch } from "../hooks/useStockData";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
@@ -206,6 +206,7 @@ export default function Navbar() {
     { to: "/stocks/japan", label: t("nav.japanStocks"), flag: "🇯🇵" },
     { to: "/stocks/us", label: t("nav.usStocks"), flag: "🇺🇸" },
     { to: "/stocks/other", label: t("nav.otherCrypto"), icon: Globe },
+    { to: "/brokers", label: t("nav.brokers"), icon: Landmark },
   ];
 
   const isLinkActive = (to: string, alias?: string) => {

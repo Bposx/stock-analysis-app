@@ -27,6 +27,7 @@ export const translations = {
     "nav.japanStocks": "ຫຸ້ນຍີ່ປຸ່ນ",
     "nav.usStocks": "ຫຸ້ນອາເມລິກາ",
     "nav.otherCrypto": "ອື່ນໆ & Crypto",
+    "nav.brokers": "ແນະນຳໂບຣກເກີ",
     "nav.searchPlaceholder": "ຄົ້ນຫາ AAPL, PTT.BK, BCEL, BTC-USD...",
 
     // Dashboard
@@ -203,6 +204,31 @@ export const translations = {
     "analysis.hideBreakdown": "ເຊື່ອງ ລາຍລະອຽດຕົວຊີ້ວັດທາງເຕັກນິກ",
     "analysis.indicatorsCount": "ຕົວຊີ້ວັດ",
 
+    // Brokers
+    "brokers.badge": "ຄູ່ມືການລົງທຶນ",
+    "brokers.title": "ຄູ່ມື & ແນະນຳໂບຣກເກີລົງທຶນ",
+    "brokers.subtitle": "ລວບລວມບໍລິສັດຫຼັກຊັບທີ່ຖືກຕ້ອງຕາມກົດໝາຍໃນ ສປປ ລາວ ແລະ ແພລັດຟອມລົງທຶນມາດຕະຖານສາກົນ ສຳລັບຜູ້ເລີ່ມຕົ້ນ ແລະ ນັກລົງທຶນມືອາຊີບ",
+    "brokers.tabAll": "ທຸກໂບຣກເກີ",
+    "brokers.tabLsx": "🇱🇦 ໂບຣກເກີຫຸ້ນລາວ (LSX)",
+    "brokers.tabGlobal": "🌍 ໂບຣກເກີຫຸ້ນຕ່າງປະເທດ",
+    "brokers.tabCrypto": "🪙 Crypto & ດິຈິທອນ",
+    "brokers.search": "ຄົ້ນຫາຊື່ໂບຣກເກີ, ຕະຫຼາດ ຫຼື ຄຸນສົມບັດ...",
+    "brokers.officialLsx": "ບໍລິສັດຫຼັກຊັບ ສະມາຊິກຕະຫຼາດຫຼັກຊັບລາວ (LSX Member)",
+    "brokers.licensed": "ໄດ້ຮັບໃບອະນຸຍາດຈາກ ສຄລ",
+    "brokers.globalReg": "ກຳກັບດູແລໂດຍໜ່ວຍງານສາກົນ (SEC / FCA / ASIC)",
+    "brokers.visitWebsite": "ໄປຍັງເວັບໄຊທາງການ",
+    "brokers.openAccountGuide": "ວິທີເປີດບັນຊີ",
+    "brokers.highlights": "ຈຸດເດັ່ນສຳຄັນ",
+    "brokers.fees": "ຄ່າທຳນຽມຊື້ຂາຍ",
+    "brokers.minDeposit": "ເງິນຝາກຂັ້ນຕ່ຳ",
+    "brokers.depositMethod": "ວິທີຝາກ-ຖອນ",
+    "brokers.platforms": "ແພລັດຟອມ / ແອັບ",
+    "brokers.contact": "ຕິດຕໍ່ສອບຖາມ",
+    "brokers.guideTitle": "4 ຂັ້ນຕອນງ່າຍໆ ໃນການເປີດບັນຊີຫຸ້ນລາວ (LSX)",
+    "brokers.guideSubtitle": "ທ່ານສາມາດເປີດບັນຊີຊື້ຂາຍຫຸ້ນໄດ້ງ່າຍໆ ໂດຍສະເພາະຜ່ານແອັບ BCEL One ໂດຍບໍ່ຈຳເປັນຕ້ອງໄປສາຂາ",
+    "brokers.docsTitle": "ເອກະສານທີ່ຕ້ອງກຽມໃນການເປີດບັນຊີ",
+    "brokers.safetyTitle": "ຄຳເຕືອນຄວາມປອດໄພ & ຮູ້ທັນມິດສາຊີບ",
+
     // Theme
     "theme.dark": "ໂໝດມືດ (ດຳ)",
     "theme.light": "ໂໝດສະຫວ່າງ (ຂາວ)",
@@ -232,6 +258,7 @@ export const translations = {
     "nav.japanStocks": "หุ้นญี่ปุ่น",
     "nav.usStocks": "หุ้นสหรัฐฯ",
     "nav.otherCrypto": "อื่นๆ & คริปโต",
+    "nav.brokers": "แนะนำโบรกเกอร์",
     "nav.searchPlaceholder": "ค้นหา AAPL, PTT.BK, BCEL, BTC-USD...",
 
     // Dashboard
@@ -408,6 +435,31 @@ export const translations = {
     "analysis.hideBreakdown": "ซ่อน รายละเอียดตัวชี้วัดทางเทคนิค",
     "analysis.indicatorsCount": "ตัวชี้วัด",
 
+    // Brokers
+    "brokers.badge": "คู่มือการลงทุน",
+    "brokers.title": "คู่มือ & แนะนำโบรกเกอร์ลงทุน",
+    "brokers.subtitle": "รวบรวมบริษัทหลักทรัพย์ที่ถูกต้องตามกฎหมายใน สปป. ลาว และแพลตฟอร์มการลงทุนมาตรฐานสากล สำหรับมือใหม่และมืออาชีพ",
+    "brokers.tabAll": "ทุกโบรกเกอร์",
+    "brokers.tabLsx": "🇱🇦 โบรกเกอร์หุ้นลาว (LSX)",
+    "brokers.tabGlobal": "🌍 โบรกเกอร์หุ้นต่างประเทศ",
+    "brokers.tabCrypto": "🪙 คริปโต & ดิจิทัล",
+    "brokers.search": "ค้นหาชื่อโบรกเกอร์ หรือ จุดเด่น...",
+    "brokers.officialLsx": "สมาชิกตลาดหลักทรัพย์ลาว (LSX Member)",
+    "brokers.licensed": "ได้รับใบอนุญาตจาก สำนักงาน ก.ล.ต. ลาว (LSC)",
+    "brokers.globalReg": "กำกับดูแลโดยองค์กรสากล (SEC / FCA / ASIC)",
+    "brokers.visitWebsite": "ไปยังเว็บไซต์ทางการ",
+    "brokers.openAccountGuide": "วิธีเปิดบัญชี",
+    "brokers.highlights": "จุดเด่นสำคัญ",
+    "brokers.fees": "ค่าธรรมเนียมซื้อขาย",
+    "brokers.minDeposit": "เงินฝากขั้นต่ำ",
+    "brokers.depositMethod": "วิธีฝาก-ถอน",
+    "brokers.platforms": "แพลตฟอร์ม / แอป",
+    "brokers.contact": "ติดต่อสอบถาม",
+    "brokers.guideTitle": "4 ขั้นตอนง่ายๆ ในการเปิดบัญชีหุ้นลาว (LSX)",
+    "brokers.guideSubtitle": "คุณสามารถเปิดบัญชีซื้อขายหุ้นได้ง่ายๆ โดยเฉพาะผ่านแอป BCEL One โดยไม่ต้องไปสาขา",
+    "brokers.docsTitle": "เอกสารที่ต้องเตรียมในการเปิดบัญชี",
+    "brokers.safetyTitle": "คำเตือนความปลอดภัย & ข้อควรระวัง",
+
     // Theme
     "theme.dark": "โหมดมืด (ดำ)",
     "theme.light": "โหมดสว่าง (ขาว)",
@@ -437,6 +489,7 @@ export const translations = {
     "nav.japanStocks": "Japan Stocks",
     "nav.usStocks": "US Stocks",
     "nav.otherCrypto": "Other & Crypto",
+    "nav.brokers": "Brokers Guide",
     "nav.searchPlaceholder": "Search AAPL, PTT.BK, BCEL, BTC-USD...",
 
     // Dashboard
@@ -613,6 +666,31 @@ export const translations = {
     "analysis.hideBreakdown": "Hide Technical Indicator Breakdown",
     "analysis.indicatorsCount": "indicators",
 
+    // Brokers
+    "brokers.badge": "Investor Guide",
+    "brokers.title": "Brokers Guide & Recommendations",
+    "brokers.subtitle": "Official licensed securities firms in Lao PDR and top-tier global investment platforms for beginners and experienced investors",
+    "brokers.all": "All",
+    "brokers.tabLsx": "🇱🇦 Lao Brokers (LSX)",
+    "brokers.tabGlobal": "🌍 Global Brokers",
+    "brokers.tabCrypto": "🪙 Crypto & Digital",
+    "brokers.search": "Search broker name, markets, or features...",
+    "brokers.officialLsx": "Official LSX Member Securities Firm",
+    "brokers.licensed": "Licensed by Lao Securities Commission (LSC)",
+    "brokers.globalReg": "Regulated by Global Authorities (SEC / FCA / ASIC)",
+    "brokers.visitWebsite": "Visit Official Website",
+    "brokers.openAccountGuide": "How to Open Account",
+    "brokers.highlights": "Key Highlights",
+    "brokers.fees": "Trading Commission",
+    "brokers.minDeposit": "Min. Deposit",
+    "brokers.depositMethod": "Deposit/Withdrawal",
+    "brokers.platforms": "Platforms / Apps",
+    "brokers.contact": "Contact Info",
+    "brokers.guideTitle": "4 Simple Steps to Open a Lao Stock Account (LSX)",
+    "brokers.guideSubtitle": "Easily open a stock trading account directly via the BCEL One app without visiting a branch",
+    "brokers.docsTitle": "Documents Required to Open an Account",
+    "brokers.safetyTitle": "Safety Tips & Scam Warning",
+
     // Theme
     "theme.dark": "Dark Mode",
     "theme.light": "Light Mode",
@@ -642,6 +720,7 @@ export const translations = {
     "nav.japanStocks": "日本股票",
     "nav.usStocks": "美股市场",
     "nav.otherCrypto": "其他 & 加密货币",
+    "nav.brokers": "券商指南",
     "nav.searchPlaceholder": "搜索 AAPL, PTT.BK, BCEL, BTC-USD...",
 
     // Dashboard
@@ -817,6 +896,31 @@ export const translations = {
     "analysis.showBreakdown": "查看各技术指标深度明细",
     "analysis.hideBreakdown": "收起技术指标深度明细",
     "analysis.indicatorsCount": "项指标",
+
+    // Brokers
+    "brokers.badge": "投资指南",
+    "brokers.title": "券商推荐与开户指南",
+    "brokers.subtitle": "老挝证券交易所 (LSX) 正规持牌证券公司与全球顶级国际投资平台精选推荐，助您安全开启投资之路",
+    "brokers.all": "全部券商",
+    "brokers.tabLsx": "🇱🇦 老挝本土券商 (LSX)",
+    "brokers.tabGlobal": "🌍 国际主流券商",
+    "brokers.tabCrypto": "🪙 加密与数字资产",
+    "brokers.search": "搜索券商名称、支持市场或功能特色...",
+    "brokers.officialLsx": "老挝证券交易所 (LSX) 会员券商",
+    "brokers.licensed": "获老挝证券监督管理委员会 (LSC) 批准",
+    "brokers.globalReg": "受全球顶级权威机构监管 (SEC / FCA / ASIC)",
+    "brokers.visitWebsite": "访问官方网站",
+    "brokers.openAccountGuide": "开户指引",
+    "brokers.highlights": "核心优势",
+    "brokers.fees": "交易佣金",
+    "brokers.minDeposit": "最低入金",
+    "brokers.depositMethod": "出入金方式",
+    "brokers.platforms": "支持软件/平台",
+    "brokers.contact": "联系方式",
+    "brokers.guideTitle": "在老挝证券市场开户的 4 个便捷步骤",
+    "brokers.guideSubtitle": "支持直接通过 BCEL One 手机银行快速在线开户申请，足不出户轻松理财",
+    "brokers.docsTitle": "开户所需准备的材料清单",
+    "brokers.safetyTitle": "投资安全警示与防诈骗提醒",
 
     // Theme
     "theme.dark": "深色模式 (黑)",

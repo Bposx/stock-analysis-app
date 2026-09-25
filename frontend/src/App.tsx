@@ -12,6 +12,7 @@ import ChinaStocks from "./pages/ChinaStocks";
 import JapanStocks from "./pages/JapanStocks";
 import USStocks from "./pages/USStocks";
 import OtherStocks from "./pages/OtherStocks";
+import BrokersGuide from "./pages/BrokersGuide";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { analyticsApi } from "./api/client";
@@ -54,6 +55,7 @@ function AppContent() {
               <Route path="/stocks/japan" element={<JapanStocks />} />
               <Route path="/stocks/us" element={<USStocks />} />
               <Route path="/stocks/other" element={<OtherStocks />} />
+              <Route path="/brokers" element={<BrokersGuide />} />
               <Route path="/stock/:symbol" element={<StockDetail />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
