@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -13,10 +14,31 @@ import USStocks from "./pages/USStocks";
 import OtherStocks from "./pages/OtherStocks";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { analyticsApi } from "./api/client";
+
+function RouteTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    try {
+      let vid = localStorage.getItem("lao_stock_vid");
+      if (!vid) {
+        vid = "v_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
+        localStorage.setItem("lao_stock_vid", vid);
+      }
+      analyticsApi.track(location.pathname, vid).catch(() => {});
+    } catch {
+      // Ignore if tracking fails
+    }
+  }, [location.pathname]);
+
+  return null;
+}
 
 function AppContent() {
   return (
     <BrowserRouter>
+      <RouteTracker />
       <div className="min-h-screen bg-surface flex flex-col">
         <Navbar />
         <main className="flex-1 container mx-auto px-4 py-6 max-w-[1400px]">

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import StockChart from "../components/StockChart";
 import AnalysisReport from "../components/AnalysisReport";
+import CommentSection from "../components/CommentSection";
 import { useQuote, useCompanyInfo, useIndicators, useAddToWatchlist } from "../hooks/useStockData";
 import { useLanguage } from "../i18n/LanguageContext";
 import { getLocalizedCompanyName } from "../i18n/marketData";
@@ -517,6 +518,9 @@ export default function StockDetail() {
           )}
         </div>
       )}
+
+      {/* Community Comments & Discussions */}
+      <CommentSection symbol={cleanSym} stockName={localizedName} />
 
       {/* Investment Profile Modal */}
       {showProfile && info && (

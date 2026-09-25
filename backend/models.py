@@ -80,3 +80,29 @@ class LSXMarketSummary(Base):
     declines: Mapped[int] = mapped_column(Integer, nullable=True)
     unchanged: Mapped[int] = mapped_column(Integer, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class VisitorLog(Base):
+    """ບັນທຶກການເຂົ້າຊົມເວັບໄຊ"""
+    __tablename__ = "visitor_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    page: Mapped[str] = mapped_column(String(200), default="/", index=True)
+    visitor_id: Mapped[str] = mapped_column(String(100), index=True, nullable=True)
+    ip_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class Comment(Base):
+    """ຄຳຄິດເຫັນຂອງຜູ້ເຂົ້າຊົມ (ແຍກຕາມຫຸ້ນ ຫຼື ທົ່ວໄປ)"""
+    __tablename__ = "comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(50), index=True, default="GENERAL")
+    author_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    sentiment: Mapped[str] = mapped_column(String(20), default="NEUTRAL")  # BULLISH | BEARISH | NEUTRAL
+    likes: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+

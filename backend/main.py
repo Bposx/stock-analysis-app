@@ -21,7 +21,7 @@ if CURRENT_DIR not in sys.path:
 from config import settings
 from database import init_db
 from scheduler import start_scheduler, stop_scheduler
-from routers import stocks, lsx, indicators, watchlist
+from routers import stocks, lsx, indicators, watchlist, analytics, comments
 
 # Configure logging
 logging.basicConfig(
@@ -91,6 +91,8 @@ app.include_router(stocks.router)
 app.include_router(lsx.router)
 app.include_router(indicators.router)
 app.include_router(watchlist.router)
+app.include_router(analytics.router)
+app.include_router(comments.router)
 
 
 @app.get("/")

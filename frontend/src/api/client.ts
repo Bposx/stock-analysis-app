@@ -126,3 +126,36 @@ export const watchlistApi = {
     api.post("/watchlist/", { symbol, source, note }),
   remove: (id: number) => api.delete(`/watchlist/${id}`),
 };
+
+export interface VisitorStats {
+  total_visits: number;
+  today_visits: number;
+  unique_visitors: number;
+}
+
+export interface CommentItem {
+  id: number;
+  symbol: string;
+  author_name: string;
+  content: string;
+  sentiment: "BULLISH" | "BEARISH" | "NEUTRAL";
+  likes: number;
+  created_at: string;
+}
+
+export const analyticsApi = {
+  track: (page: string, visitor_id?: string) =>
+    api.post<{ success: boolean }>("/analytics/track", { page, visitor_id }),
+  getStats: () =>
+    api.get<{ success: boolean; data: VisitorStats }>("/analytics/stats"),
+};
+
+export const commentsApi = {
+  getBySymbol: (symbol: string) =>
+    api.get<{ success: boolean; data: CommentItem[] }>(`/comments/${symbol}`),
+  create: (symbol: string, data: { author_name: string; content: string; sentiment?: string }) =>
+    api.post<{ success: boolean; data: CommentItem }>(`/comments/${symbol}`, data),
+  like: (commentId: number) =>
+    api.post<{ success: boolean; likes: number }>(`/comments/like/${commentId}`),
+};
+

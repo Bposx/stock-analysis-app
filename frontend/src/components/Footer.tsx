@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { TrendingUp, ShieldAlert, Activity, Globe, Database, ArrowUpRight } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import VisitorCounter from "./VisitorCounter";
 
 export default function Footer() {
   const { t } = useLanguage();
@@ -100,6 +101,11 @@ export default function Footer() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Live Visitor Statistics Counter */}
+        <div className="mb-6">
+          <VisitorCounter />
         </div>
 
         {/* Disclaimer Banner Box */}
