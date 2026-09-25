@@ -341,6 +341,14 @@ const BROKERS_DATA: BrokerItem[] = [
     },
     platforms: ["IBKR GlobalTrader", "IBKR Mobile (iOS/Android)", "Trader Workstation (TWS)", "Client Portal Web"],
     website: "https://www.interactivebrokers.com",
+    referralUrl: "https://ibkr.com/referral/bounpheng720",
+    referralCode: "bounpheng720",
+    referralBonus: {
+      lo: "🎁 ຮັບຮຸ້ນ IBKR ຟຣີສູງເຖິງ $1,000 USD ເມື່ອເປີດບັນຊີຜ່ານລິ້ງແນະນຳນີ້",
+      th: "🎁 รับหุ้น IBKR ฟรีมูลค่าสูงสุด $1,000 USD เมื่อเปิดบัญชีผ่านลิงก์นี้",
+      en: "🎁 Earn up to $1,000 USD in free IBKR shares when opening an account via this link",
+      zh: "🎁 通过此专属邀请链接开户入金即可获赠最高价值 $1,000 美元的 IBKR 股票奖励",
+    },
   },
   {
     id: "etoro",
@@ -846,6 +854,8 @@ export default function BrokersGuide() {
                         "flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all hover:scale-[1.01]",
                         broker.id === "binance"
                           ? "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-extrabold shadow-amber-500/20"
+                          : broker.id === "ibkr"
+                          ? "bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-extrabold shadow-red-600/20"
                           : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
                       )}
                     >
