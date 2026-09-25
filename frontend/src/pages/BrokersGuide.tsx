@@ -16,7 +16,10 @@ import {
   Percent,
   Sparkles,
   ChevronRight,
-  Info
+  Info,
+  Gift,
+  Copy,
+  Check
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import clsx from "clsx";
@@ -64,6 +67,14 @@ interface BrokerItem {
   platforms: string[];
   website: string;
   openAccountUrl?: string;
+  referralUrl?: string;
+  referralCode?: string;
+  referralBonus?: {
+    lo: string;
+    th: string;
+    en: string;
+    zh: string;
+  };
   contact?: {
     phone?: string;
     address?: string;
@@ -456,6 +467,14 @@ const BROKERS_DATA: BrokerItem[] = [
     },
     platforms: ["Binance App (iOS/Android)", "Binance Web", "Desktop App"],
     website: "https://www.binance.com",
+    referralUrl: "https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_IZJD7&utm_source=referral_entrance",
+    referralCode: "GRO_28502_IZJD7",
+    referralBonus: {
+      lo: "🎁 ຮັບໂບນັດຮ່ວມກັນ (Refer2Earn USDC) ເມື່ອສະໝັກຜ່ານລິ້ງແນະນຳນີ້",
+      th: "🎁 รับโบนัสพิเศษ (Refer2Earn USDC) เมื่อลงทะเบียนผ่านลิงก์นี้",
+      en: "🎁 Earn USDC welcome rewards together when registering via this referral link",
+      zh: "🎁 通过此专属邀请链接注册即可共享 USDC 迎新奖励",
+    },
   },
 ];
 
@@ -530,6 +549,17 @@ export default function BrokersGuide() {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<"all" | "lsx" | "global" | "crypto">("all");
   const [search, setSearch] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const handleCopyCode = (code: string) => {
+    try {
+      navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2500);
+    } catch {
+      // Fallback
+    }
+  };
 
   const filteredBrokers = BROKERS_DATA.filter((b) => {
     const matchCategory = activeTab === "all" || b.category === activeTab;
@@ -779,17 +809,80 @@ export default function BrokersGuide() {
                 </div>
               </div>
 
+              {/* Referral Bonus Banner (if available) */}
+              {broker.referralBonus && (
+                <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/15 border border-amber-400/40 dark:border-yellow-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                    <Gift size={16} className="text-amber-500 shrink-0" />
+                    <span>{broker.referralBonus[language] || broker.referralBonus.en}</span>
+                  </div>
+                  {broker.referralCode && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode(broker.referralCode!)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-mono font-bold transition-colors shrink-0 self-start sm:self-auto cursor-pointer border border-amber-500/30"
+                      title="Copy Referral Code"
+                    >
+                      <span>Ref: {broker.referralCode}</span>
+                      {copiedCode === broker.referralCode ? (
+                        <Check size={13} className="text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Copy size={13} className="text-amber-700 dark:text-amber-300" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="pt-4 border-t border-sky-150 dark:border-surface-border flex items-center justify-between gap-3">
-                <a
-                  href={broker.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.01]"
-                >
-                  <span>{t("brokers.visitWebsite")}</span>
-                  <ExternalLink size={15} />
-                </a>
+              <div className="pt-4 border-t border-sky-150 dark:border-surface-border flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                {broker.referralUrl ? (
+                  <>
+                    <a
+                      href={broker.referralUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={clsx(
+                        "flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all hover:scale-[1.01]",
+                        broker.id === "binance"
+                          ? "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-extrabold shadow-amber-500/20"
+                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+                      )}
+                    >
+                      <Sparkles size={16} className={broker.id === "binance" ? "text-slate-950" : "text-yellow-300"} />
+                      <span>
+                        {language === "lo"
+                          ? "ສະໝັກເປີດບັນຊີ (ຮັບໂບນັດ)"
+                          : language === "th"
+                          ? "สมัครเปิดบัญชี (รับโบนัส)"
+                          : language === "zh"
+                          ? "立即注册开户 (享迎新礼)"
+                          : "Sign Up (Claim Bonus)"}
+                      </span>
+                      <ExternalLink size={14} />
+                    </a>
+
+                    <a
+                      href={broker.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-hover dark:hover:bg-surface-border text-slate-700 dark:text-gray-300 font-semibold text-xs transition-colors shrink-0"
+                    >
+                      <span>{t("brokers.visitWebsite")}</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  </>
+                ) : (
+                  <a
+                    href={broker.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.01]"
+                  >
+                    <span>{t("brokers.visitWebsite")}</span>
+                    <ExternalLink size={15} />
+                  </a>
+                )}
               </div>
             </div>
           );
