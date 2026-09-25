@@ -104,13 +104,8 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Live Visitor Statistics Counter */}
-        <div className="mb-6">
-          <VisitorCounter />
-        </div>
-
         {/* Disclaimer Banner Box */}
-        <div className="p-4 sm:p-5 rounded-xl bg-sky-100/60 dark:bg-blue-950/30 border border-sky-200/80 dark:border-blue-900/40 mb-8">
+        <div className="p-4 sm:p-5 rounded-xl bg-sky-100/60 dark:bg-blue-950/30 border border-sky-200/80 dark:border-blue-900/40 mb-6">
           <div className="flex items-start gap-3">
             <ShieldAlert size={18} className="text-sky-700 dark:text-sky-400 shrink-0 mt-0.5" />
             <div className="text-sm leading-relaxed">
@@ -124,11 +119,15 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar: Copyright & Details */}
-        <div className="pt-5 border-t border-sky-200/60 dark:border-blue-950/60 flex flex-col sm:flex-row items-center justify-between text-sm text-slate-500 dark:text-gray-400 gap-3">
+        {/* Bottom Bar: Copyright, Compact Visitor Stats & Details */}
+        <div className="pt-5 border-t border-sky-200/60 dark:border-blue-950/60 flex flex-col md:flex-row items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-gray-400 gap-3">
           <div>
             © {new Date().getFullYear()} <span className="font-semibold text-slate-800 dark:text-gray-200">StockLao Analytics</span>. {t("footer.rights")}
           </div>
+
+          {/* Compact Visitor Counter */}
+          <VisitorCounter />
+
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-sky-100/80 dark:bg-blue-950/60 text-sky-800 dark:text-sky-400 border border-sky-200/60 dark:border-blue-900/40 font-semibold">
               v1.0.0 Pro
