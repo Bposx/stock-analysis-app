@@ -1,0 +1,6 @@
+# robots.txt for StockLao Analysis App
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://stock-lao-web.onrender.com/sitemap.xml

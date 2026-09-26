@@ -2,14 +2,73 @@
 <html lang="lo">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stock Analysis — ວິເຄາະຫຸ້ນ LSX & ຕ່າງປະເທດ</title>
-    <meta name="description" content="ລະບົບວິເຄາະຫຸ້ນ LSX ແລະ ຫຸ້ນຕ່າງປະເທດ" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>StockLao — ວິເຄາະຫຸ້ນລາວ LSX & ຫຸ້ນຕ່າງປະເທດ | ລາຄາຫຸ້ນ Real-time, ກຣາຟ ແລະ ຄູ່ມືໂບຣກເກີ</title>
+    <meta name="title" content="StockLao — ວິເຄາະຫຸ້ນລາວ LSX & ຫຸ້ນຕ່າງປະເທດ | ລາຄາຫຸ້ນ Real-time, ກຣາຟ ແລະ ຄູ່ມືໂບຣກເກີ" />
+    <meta name="description" content="ເວັບໄຊວິເຄາະຕະຫຼາດຫຼັກຊັບລາວ (LSX) ເຊັ່ນ BCEL, EDL-Gen, PTL... ຕິດຕາມລາຄາຫຸ້ນແບບ Real-time, ກຣາຟເຕັກນິກ RSI, MACD, ຫຸ້ນໄທ SET, ຫຸ້ນສະຫະລັດ, ຄູ່ມືແນະນຳໂບຣກເກີ ແລະ ວິທີເປີດບັນຊີຫຸ້ນລາວ." />
+    <meta name="keywords" content="ຫຸ້ນລາວ, ຕະຫຼາດຫຼັກຊັບລາວ, LSX, BCEL, EDL-Gen, PTL, ລາຄາຫຸ້ນລາວ, ວິເຄາະຫຸ້ນລາວ, ໂບຣກເກີລາວ, BCEL-KT, ຕະຫຼາດຮຸ້ນ, ຮຸ້ນລາວ, ລົງທຶນຫຸ້ນລາວ, ເປີດບັນຊີຫຸ້ນ, ຫຸ້ນໄທ, ຫຸ້ນອາເມລິກາ, Lao stock, LSX stock market, Lao securities, stock analysis Laos, BCEL share price" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="author" content="StockLao Analytics" />
+    <link rel="canonical" href="https://stock-lao-web.onrender.com/" />
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- Open Graph / Facebook / Telegram Sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://stock-lao-web.onrender.com/" />
+    <meta property="og:title" content="StockLao — ວິເຄາະຫຸ້ນລາວ LSX & ຫຸ້ນຕ່າງປະເທດ" />
+    <meta property="og:description" content="ຕິດຕາມລາຄາຫຸ້ນຕະຫຼາດຫຼັກຊັບລາວ (LSX) ແບບ Real-time, ກຣາຟວິເຄາະເຕັກນິກ ແລະ ຄູ່ມືແນະນຳໂບຣກເກີລົງທຶນ." />
+    <meta property="og:site_name" content="StockLao Analytics" />
+    <meta property="og:locale" content="lo_LA" />
+    <meta property="og:image" content="https://stock-lao-web.onrender.com/favicon.svg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://stock-lao-web.onrender.com/" />
+    <meta name="twitter:title" content="StockLao — ວິເຄາະຫຸ້ນລາວ LSX & ຫຸ້ນຕ່າງປະເທດ" />
+    <meta name="twitter:description" content="ເວັບໄຊວິເຄາະຕະຫຼາດຫຼັກຊັບລາວ (LSX) ແລະ ຫຸ້ນຕ່າງປະເທດແບບ Real-time." />
+    <meta name="twitter:image" content="https://stock-lao-web.onrender.com/favicon.svg" />
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" href="/fonts/phetsarath-ot.ttf" as="font" type="font/ttf" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Schema.org Structured Data (JSON-LD) for Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://stock-lao-web.onrender.com/#website",
+          "url": "https://stock-lao-web.onrender.com/",
+          "name": "StockLao",
+          "description": "ລະບົບວິເຄາະຫຸ້ນຕະຫຼາດຫຼັກຊັບລາວ LSX ແລະ ຕະຫຼາດຫຸ້ນສາກົນ",
+          "inLanguage": ["lo", "th", "en", "zh"],
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://stock-lao-web.onrender.com/stock/{search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "FinancialService",
+          "@id": "https://stock-lao-web.onrender.com/#organization",
+          "name": "StockLao Analytics",
+          "url": "https://stock-lao-web.onrender.com/",
+          "logo": "https://stock-lao-web.onrender.com/favicon.svg",
+          "description": "ແພລັດຟອມວິເຄາະຂໍ້ມູນຕະຫຼາດຫຼັກຊັບລາວ (LSX), ລາຄາຫຸ້ນ BCEL, EDL-Gen, PTL ແລະ ຄູ່ມືແນະນຳໂບຣກເກີລົງທຶນ"
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
