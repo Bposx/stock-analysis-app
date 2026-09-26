@@ -15,16 +15,24 @@ const STORAGE_KEY = "stock_app_lang";
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as Language;
-    if (saved && (saved === "lo" || saved === "th" || saved === "en" || saved === "zh")) {
-      return saved;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY) as Language;
+      if (saved && (saved === "lo" || saved === "th" || saved === "en" || saved === "zh")) {
+        return saved;
+      }
+    } catch {
+      // In-app or restricted browser
     }
     return "lo";
   });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem(STORAGE_KEY, lang);
+    try {
+      localStorage.setItem(STORAGE_KEY, lang);
+    } catch {
+      // In-app or restricted browser
+    }
     document.documentElement.lang = lang;
   };
 

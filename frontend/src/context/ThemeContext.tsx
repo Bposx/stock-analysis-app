@@ -14,9 +14,13 @@ const STORAGE_KEY = "stock_app_theme";
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as Theme;
-    if (saved === "light" || saved === "dark") {
-      return saved;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY) as Theme;
+      if (saved === "light" || saved === "dark") {
+        return saved;
+      }
+    } catch {
+      // In-app or restricted browser
     }
     return "dark"; // Default to dark mode
   });
@@ -39,7 +43,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    localStorage.setItem(STORAGE_KEY, t);
+    try {
+      localStorage.setItem(STORAGE_KEY, t);
+    } catch {
+      // In-app or restricted browser
+    }
     applyTheme(t);
   };
 

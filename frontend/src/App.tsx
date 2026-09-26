@@ -40,10 +40,10 @@ function AppContent() {
   return (
     <BrowserRouter>
       <RouteTracker />
-      <div className="min-h-screen bg-surface flex flex-col">
-        <Navbar />
-        <main className="flex-1 container mx-auto px-4 py-6 max-w-[1400px]">
-          <ErrorBoundary>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-surface flex flex-col">
+          <Navbar />
+          <main className="flex-1 container mx-auto px-4 py-6 max-w-[1400px]">
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
@@ -59,10 +59,10 @@ function AppContent() {
               <Route path="/stock/:symbol" element={<StockDetail />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
-          </ErrorBoundary>
-        </main>
-        <Footer />
-      </div>
+          </main>
+          <Footer />
+        </div>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
